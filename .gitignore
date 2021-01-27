@@ -1,0 +1,7 @@
+/doc/*.toc
+/doc/*.aux
+/doc/*.log
+/doc/*.out
+/doc/*.run.xml
+/doc/*.synctex.gz
+.DS_Store
