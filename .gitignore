@@ -4,4 +4,7 @@
 /doc/*.out
 /doc/*.run.xml
 /doc/*.synctex.gz
+/doc/*.bbl
+/doc/*.blg
+/code/.ipynb_checkpoints/
 .DS_Store
