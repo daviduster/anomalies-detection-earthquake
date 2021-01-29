@@ -90,13 +90,13 @@ Un resumen rápido de esta situación \cite{pictoline} es que un grupo de invers
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{../code/figures/gamestop-stocks}
 \centering
-\caption{Gamstop stock from the last days}
+\caption{Gamestop stock from the last days}
 \label{fig:gamestop-stock}
 \end{figure}
 
 Sin embargo, esta estrategia llegó a oídos de los miembros del subreddit \textit{wallstreetbets}, a quienes les pareció mal cómo se estaban comportando estos inversores. Decidieron tomar la decisión de comprar estas acciones baratas, inflando rápidamente el valor mucho más allá de lo que esperaban los administradores de fondos de cobertura, de manera que algunos miembros de Reddit han llegado a pagar miles de dólares con el objetivo de reventar los planes de los inversores mencionados anteriormente [\ref{fig:gamestop-stock}]. Mientras que \textit{wallstreetbets} celebran la locura y dicen que no van a vender y seguir comprando (incluso hay gente que compro hace año y medio una call con 50k y si la ejecuta se llevaría 36 millones ahora mismo) \cite{call}. Ahora los compradores de Reddit deben calcular cuándo vender sus acciones para obtener beneficio, el cual podría ser de hasta 3.000 veces lo que compraron. Además, están explorando otros informes de \textbf{AMC} y \textbf{BlackBerry}, una cadena de cines estadounidense y una empresa de tecnología canadiense, para llevar a cabo acciones similares. \textbf{Otro tema interesante podría ser que debido a este fenómeno hay gente aplicando análisis de opiniones/sentimientos} en este foro de reddit para ver cuál puede ser el próximo objetivo pero esto ya se sale de nuestro tema elegido que es la detección de anomalias.
 
-Para los datos, vamos a utilizar el paquete \textit{pandas-datareader} \cite{pandas-datareader} \footnote{The Pandas datareader is a sub package that allows one to create a dataframe from various internet datasources, currently including: Yahoo! Finance. Google Finance.} donde extraeremos los datos trading volume data de Yahoo Finance. En nuestro caso, nuestras características de entrada serán una lista de símbolos ETF, los comentados anteriormente que corresponderán a Gamestop (GME), Blackberry (BB), Nokia (NOK) y AMC. Definiremos este entorno como nuestro "mercado", aunque en la práctica podríamos hacer que sea mucho, mucho más grande. Cogemos fechas desde hace 5 años hasta hoy (28 de Enero de 2020), donde han ocurrido los acontecimientos recientes. Mostramos imagenes del trading volume y del precio de cierre en la figuras [\ref{fig:trading-volume}] y [\ref{fig:closing-price}] respectivamente.
+Para los datos, vamos a utilizar el paquete \textit{pandas-datareader} \cite{pandas-datareader} \footnote{The Pandas datareader is a sub package that allows one to create a dataframe from various internet datasources, currently including: Yahoo! Finance. Google Finance.} donde extraeremos los datos trading volume data de Yahoo Finance. En nuestro caso, nuestras características de entrada serán una lista de símbolos ETF, los comentados anteriormente que corresponderán a Gamestop (GME), Blackberry (BB), Nokia (NOK) y AMC. Definiremos este entorno como nuestro "mercado", aunque en la práctica podríamos hacer que sea mucho, mucho más grande. Cogemos fechas desde hace 5 años hasta hoy, donde han ocurrido los acontecimientos recientes. Mostramos imagenes del trading volume y del precio de cierre en la figuras [\ref{fig:trading-volume}] y [\ref{fig:closing-price}] respectivamente.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{../code/figures/trading_volume.pdf}
@@ -225,6 +225,110 @@ Isolation Forest funciona bien en datos multidimensionales
 \chapter*{Estudio experimental}
 \addcontentsline{toc}{chapter}{Estudio experimental}  
 
+\textcolor{blue}{Todo lo relacionado con esta parte de la práctica puede encontrarse en mi repositorio de \textbf{\href{https://github.com/daviduster/anomaly-detection-stock}{github}}}.\\
+\\
+
+Vamos a proceder a aplicar los algoritmos anteriores con los datos comentado en la descripción del problema, en las figuras [\ref{fig:trading-volume}] y [\ref{fig:closing-price}]. Inicialmente hagamos un describe para ver los datos en la tabla [\ref{tab:describe}]
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+{} &           GME &            BB &           NOK &           AMC \\
+\midrule
+count &  1.047000e+03 &  1.047000e+03 &  1.047000e+03 &  1.047000e+03 \\
+mean  &  5.781856e+06 &  7.729197e+06 &  2.394326e+07 &  8.067518e+06 \\
+std   &  1.296132e+07 &  2.352192e+07 &  4.480880e+07 &  4.861418e+07 \\
+min   &  9.729000e+05 &  1.054900e+06 &  3.136300e+06 &  1.802000e+05 \\
+25\%   &  2.257900e+06 &  2.954850e+06 &  1.197440e+07 &  1.430500e+06 \\
+50\%   &  3.215900e+06 &  3.960900e+06 &  1.817230e+07 &  2.155200e+06 \\
+75\%   &  5.204550e+06 &  6.122550e+06 &  2.613805e+07 &  3.928200e+06 \\
+max   &  1.967843e+08 &  3.722226e+08 &  1.123003e+09 &  1.222342e+09 \\
+\bottomrule
+\end{tabular}
+\caption{Describe}
+\label{tab:describe}
+\end{table}
+
+El campo es bastante complejo, a priori nuestro dataset depende del tiempo, en general los datos financieros son procesos estocásticos ya que tenemos la variable del tiempo, al obviar el factor del tiempo no estamos teniendo en cuenta algo muy importante, también habría que ver que definimos con un pico u outlier, una subida muy alta de la cotización de los retornos? Puede que este tipo de cosas sea cíclicas y normales respecto a la serie del tiempo. Para facilitar el tema elegido simplemente aplicaremos los algoritmos sobre un atributo o sobre ambos para facilitar la comparación y visualización y comentar los resultados. 
+
+En general nuestra serie temporal de volumen tiene picos significativos en el volumen de operaciones en nuestros ETF elegidos. Algunos eventos notables incluyen la caída repentina del Tesoro de octubre de 2014, el aumento de la volatilidad en agosto de 2015, así como la elección de Donald Trump a fines de 2016. Nótese la relativa calma a principios de 2017 ...
+
+Si bien estos eventos son obvios a simple vista (mucho después del hecho), lo que sería útil es la capacidad de clasificar automáticamente los eventos basándose únicamente en los datos del volumen de operaciones, es decir, sin el uso de un ser humano. Este es el objetivo del aprendizaje automático y, afortunadamente, este es exactamente el tipo de caso de uso para utilizar nuestros algoritmo.
+
+Inicialmente creo que es necesario trabajar con un ejemplo simple de método de detección de anomalías con una variable únicamente en el que detectamos valores atípicos a partir de una distribución de valores en un solo espacio de características. Por ello, utilizaremos únicamente los datos del atributo de \textbf{Gamestop(GME)} y vamos a encontrar patrones en volumen de trading y closing price por separado que no se ajustan al comportamiento esperado. Es decir, detectar valores atípicos para una variable a la vez.
+
+Mostramos una pequeña visualizión inicial de nuestro conjunto de datos.
+
+\begin{lstlisting}
+Skewness: 10.093959
+Kurtosis: 122.632442
+\end{lstlisting}
+
+En las imagenes [\ref{fig:dist-trading-GME}] y [\ref{fig:dist-closing-GME}] vemos que está lejos de una distribución normal, y tiene una cola larga y delgada positiva, la masa de la distribución se concentra a la izquierda de la figura. Las distribuciónes superan con creces las colas de la distribución normal.
+Hay una región donde los datos tienen baja probabilidad de aparecer y está en el lado derecho de la distribución.
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{../code/figures/distribution_trading_volume_GME.pdf}
+\centering
+\caption{Distribución trading volume GME}
+\label{fig:dist-trading-GME}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{../code/figures/distribution_closing_price_GME.pdf}
+\centering
+\caption{Distribución closing price GME}
+\label{fig:dist-closing-GME}
+\end{figure}
+
+Como hemos visto antes, Isolation Forest es un algoritmo para detectar valores atípicos que devuelve la puntuación de anomalía de cada muestra utilizando el algoritmo IsolationForest que se basa en el hecho de que las anomalías son puntos de datos que son pocos y diferentes. Isolation Forest es un modelo basado en árboles. En estos árboles, las particiones se crean seleccionando primero al azar una característica y luego seleccionando un valor de división aleatoria entre el valor mínimo y máximo de la característica seleccionada. Vamos a utilizar este algoritmo que funciona para Univariate Anomaly Detection en el caso de GME. 
+
+El siguiente proceso muestra cómo se comporta IsolationForest en el caso de GME,
+IsolationForest entrenado usando los datos de GME. Almacenamos el valor en una matriz NumPy para usarla en nuestro modelo más adelante. Calcula la puntuación de anomalía para cada observación. La puntuación de anomalía de una muestra de entrada se calcula como la puntuación media de anomalía de los árboles en el bosque. Clasificamos cada observación como un valor atípico o no atípico. Y finalmente usamos visualización para resaltar las regiones donde caen los valores atípicos.
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=9cm]{../code/figures/if_trading_GME.pdf}\par 
+    \includegraphics[width=9cm]{../code/figures/if_closing_GME.pdf}\par 
+\end{multicols}
+\caption{Isolation Forest GME}
+\label{fig:if-GME}
+\end{figure}
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=9cm]{../code/figures/if_trading_BB.pdf}\par 
+    \includegraphics[width=9cm]{../code/figures/if_closing_BB.pdf}\par 
+\end{multicols}
+\caption{Isolation Forest BB}
+\end{figure}
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=9cm]{../code/figures/if_trading_NOK.pdf}\par 
+    \includegraphics[width=9cm]{../code/figures/if_closing_NOK.pdf}\par 
+\end{multicols}
+\caption{Isolation Forest NOK}
+\end{figure}
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=9cm]{../code/figures/if_trading_AMC.pdf}\par 
+    \includegraphics[width=9cm]{../code/figures/if_closing_AMC.pdf}\par 
+\end{multicols}
+\caption{Isolation Forest AMC}
+\label{fig:if-AMC}
+\end{figure}
+
+
+En las imagenes de la izquiera tenemos la visualización del algoritmo  con respecto el trading volume, y a la derecha respecto al closing price. Una puntuación cercana a 1 indica anomalías. Una puntuación mucho menor que 0,5 indica observaciones normales. Si todas las puntuaciones se acercan a 0,5, entonces la muestra completa no parece tener anomalías claramente diferenciadas. Por ejemplo, en la figura de la izquierda de [\ref{fig:if-GME}], valores por encima de 0,15 definitivamente se considera un outlier. Lo cual concuerda visualmente con la gráfica [\ref{fig:trading-volume}]. Al contrario que la imagen de la derecha donde comparado con la gráfica de la izquierda, los resultados y la visualización anteriores, parece que los beneficios que estén fuera del intervalo blanco se considerarían un valor atípico, lo cuál visualmente tiene sentido. De igual manera razonaríamos para los demás casos. Destacamos [\ref{fig:if-AMC}] donde al ser más estable la gráfica, es normal que cualquier valor que sobresalga se considere un outlier.
+
+Nuestro modelo determinó que este periodo con una gran cantidad de trading es una anomalía. Las visualizaciones anteriores muestran las puntuaciones de anomalías y resaltan las regiones donde se encuentran los valores atípicos. Como era de esperar, la puntuación de anomalía refleja la forma de la distribución subyacente y las regiones atípicas corresponden a áreas de baja probabilidad.
+Sin embargo, el análisis univariante solo puede llevarnos hasta aquí. Podemos darnos cuenta de que algunas de estas anomalías determinadas por nuestros modelos no son las anomalías que esperábamos. Cuando nuestros datos son multidimensionales en lugar de univariados, los enfoques para la detección de anomalías se vuelven más intensivos desde el punto de vista computacional y más complejos matemáticamente.
+
+La mayoría de los análisis que terminamos haciendo son multivariados debido a la complejidad del mundo en el que vivimos. En la detección de anomalías multivariadas, el valor atípico es una puntuación inusual combinada en al menos dos variables.
+Entonces, usando los atributos en pares , por ejemplo GME Y BB, vamos a construir un método de detección de anomalías multivariante no supervisado basado en todos los modelos comentados anteriormente.
 
 
 \chapter*{Planteamiento de futuro}
