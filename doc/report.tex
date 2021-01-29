@@ -221,6 +221,7 @@ Isolation Forest funciona bien en datos multidimensionales
 	\end{enumerate}
 \end{enumerate}
 
+Para configurar estos algoritmos utilizaremos el parámetro contamination \footnote{The amount of contamination of the data set, i.e. the proportion of outliers in the data set. Used when fitting to define the threshold on the decision function.}.
 
 \chapter*{Estudio experimental}
 \addcontentsline{toc}{chapter}{Estudio experimental}  
@@ -228,7 +229,7 @@ Isolation Forest funciona bien en datos multidimensionales
 \textcolor{blue}{Todo lo relacionado con esta parte de la práctica puede encontrarse en mi repositorio de \textbf{\href{https://github.com/daviduster/anomaly-detection-stock}{github}}}.\\
 \\
 
-Vamos a proceder a aplicar los algoritmos anteriores con los datos comentado en la descripción del problema, en las figuras [\ref{fig:trading-volume}] y [\ref{fig:closing-price}]. Inicialmente hagamos un describe para ver los datos en la tabla [\ref{tab:describe}]
+Vamos a proceder a aplicar los algoritmos anteriores con el dataset comentado en la descripción del problema, 3104 instancias recogidas en el periodo de tiempo que va desde el 1 de dicembre de 2014 hasta hoy, 1 de febrero. En las figuras [\ref{fig:trading-volume}] y [\ref{fig:closing-price}]. Inicialmente hagamos un describe para ver los datos en la tabla [\ref{tab:describe}]
 
 \begin{table}[H]
 \centering
@@ -284,8 +285,13 @@ Hay una región donde los datos tienen baja probabilidad de aparecer y está en 
 
 Como hemos visto antes, Isolation Forest es un algoritmo para detectar valores atípicos que devuelve la puntuación de anomalía de cada muestra utilizando el algoritmo IsolationForest que se basa en el hecho de que las anomalías son puntos de datos que son pocos y diferentes. Isolation Forest es un modelo basado en árboles. En estos árboles, las particiones se crean seleccionando primero al azar una característica y luego seleccionando un valor de división aleatoria entre el valor mínimo y máximo de la característica seleccionada. Vamos a utilizar este algoritmo que funciona para Univariate Anomaly Detection en el caso de GME. 
 
-El siguiente proceso muestra cómo se comporta IsolationForest en el caso de GME,
-IsolationForest entrenado usando los datos de GME. Almacenamos el valor en una matriz NumPy para usarla en nuestro modelo más adelante. Calcula la puntuación de anomalía para cada observación. La puntuación de anomalía de una muestra de entrada se calcula como la puntuación media de anomalía de los árboles en el bosque. Clasificamos cada observación como un valor atípico o no atípico. Y finalmente usamos visualización para resaltar las regiones donde caen los valores atípicos.
+El siguiente proceso muestra cómo se comporta IsolationForest en el caso de GME, IsolationForest entrenado usando los datos de GME. Almacenamos el valor en una matriz NumPy para usarla en nuestro modelo más adelante. Calcula la puntuación de anomalía para cada observación. La puntuación de anomalía de una muestra de entrada se calcula como la puntuación media de anomalía de los árboles en el bosque. Clasificamos cada observación como un valor atípico o no atípico. Y finalmente usamos visualización para resaltar las regiones donde caen los valores atípicos.
+Hemos optado por una configuración inicial a la que asignamos 100 estimadores, también destacamos que los valores de nuestros datos han sido estandarizados para unos mejores resultados de visualización y escala.
+
+\begin{lstlisting}
+isolation_forest = IsolationForest(n_estimators=100)
+isolation_forest.fit(volume['GME'].values.reshape(-1, 1))
+\end{lstlisting}
 
 \begin{figure}[H]
 \begin{multicols}{2}
@@ -357,11 +363,121 @@ Entonces, usando los atributos en pares , por ejemplo GME Y BB, vamos a construi
 \label{fig:regplot-3}
 \end{figure}
 
+De las figuras de arriba vemos claramente como algunos puntos mas alejados son obviamente outliers. Como se ha comentado, realizaremos solo el ejemplo con los atributos GME y BB en pos de poder visualizar en 2D. El proceso que vamos a realizar para aplicar la tanda de algoritmos esta extraido de un ejemplo de la documentación de PyOD. \cite{pyod-comparison} donde los pasos son los siguientes:
+
+\begin{itemize}
+	\item Escalamos nuestros atributos entre 0 y 1
+	\item Establecer una outliers fraction basandose en prueba y error, en nuestro caso 0.01
+	\item Realizar fit del modelo y predecir con el mismo dataset ya que es un modelo no supervisado
+	\item Utilizamos el valor de threshold para definir si un punto es inlier o outlier
+	\item Finalmente usamos \textit{decision\_function}\footnote{Predict raw anomaly scores of X using the fitted detector.
+The anomaly score of an input sample is computed based on the fitted detector} para calcular la puntuación atípica para cada punto
+\end{itemize}
+
+Aplicamos este proceso para la lista de algoritmos comentada anteriormente.
+
+\begin{lstlisting}
+random_state = np.random.RandomState(42)
+outliers_fraction = 0.01
+classifiers = {
+        'Angle-based Outlier Detector (ABOD)':
+        ABOD(contamination=outliers_fraction),
+    'Cluster-based Local Outlier Factor (CBLOF)':
+        CBLOF(contamination=outliers_fraction,
+              check_estimator=False, random_state=random_state),
+    'Histogram-base Outlier Detection (HBOS)': HBOS(
+        contamination=outliers_fraction),
+    'Isolation Forest': IForest(contamination=outliers_fraction,
+                                random_state=random_state),
+    'K Nearest Neighbors (KNN)': KNN(
+        contamination=outliers_fraction),
+    'Average KNN': KNN(method='mean',
+                       contamination=outliers_fraction),
+    'Local Outlier Factor (LOF)':
+        LOF(n_neighbors=35, contamination=outliers_fraction),
+    'Minimum Covariance Determinant (MCD)': MCD(
+        contamination=outliers_fraction, random_state=random_state),
+    'One-class SVM (OCSVM)': OCSVM(contamination=outliers_fraction),
+    'Principal Component Analysis (PCA)': PCA(
+        contamination=outliers_fraction, random_state=random_state),
+    'Locally Selective Combination (LSCP)': LSCP(
+        detector_list, contamination=outliers_fraction,
+        random_state=random_state)
+}
+\end{lstlisting}
+
+A continuación mostramos las áreas de resultado del proceso.
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=\linewidth]{../code/figures/abod.png}\par 
+    \includegraphics[width=\linewidth]{../code/figures/cblof.png}\par 
+\end{multicols}
+\label{fig:abod-cblof}
+\end{figure}
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=\linewidth]{../code/figures/hbos.png}\par 
+    \includegraphics[width=\linewidth]{../code/figures/if.png}\par 
+\end{multicols}
+\label{fig:hbos-if}
+\end{figure}
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=\linewidth]{../code/figures/knn.png}\par 
+    \includegraphics[width=\linewidth]{../code/figures/average_knn.png}\par 
+\end{multicols}
+\label{fig:knn-average_knn}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=\linewidth]{../code/figures/lof.png}\par 
+    \includegraphics[width=\linewidth]{../code/figures/mcd.png}\par 
+\end{multicols}
+\label{fig:lof-mcd}
+\end{figure}
+
+\begin{figure}[H]
+\begin{multicols}{2}
+    \includegraphics[width=\linewidth]{../code/figures/ocsvm.png}\par 
+    \includegraphics[width=\linewidth]{../code/figures/pca.png}\par 
+\end{multicols}
+\label{fig:ocsvm-pca}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{../code/figures/lscp.png}
+\label{fig:lscp}
+\end{figure}
+
+donde el número de OUTLIERS e INLIERS de cada uno son los siguientes:
+
+\begin{lstlisting}
+OUTLIERS :  16 INLIERS :  1536 Angle-based Outlier Detector (ABOD)
+OUTLIERS :  16 INLIERS :  1536 Cluster-based Local Outlier Factor (CBLOF)
+OUTLIERS :  15 INLIERS :  1537 Histogram-base Outlier Detection (HBOS)
+OUTLIERS :  16 INLIERS :  1536 Isolation Forest
+OUTLIERS :  16 INLIERS :  1536 K Nearest Neighbors (KNN)
+OUTLIERS :  15 INLIERS :  1537 Average KNN
+OUTLIERS :  16 INLIERS :  1536 Local Outlier Factor (LOF)
+OUTLIERS :  16 INLIERS :  1536 Minimum Covariance Determinant (MCD)
+OUTLIERS :  16 INLIERS :  1536 One-class SVM (OCSVM)
+OUTLIERS :  16 INLIERS :  1536 Principal Component Analysis (PCA)
+OUTLIERS :  16 INLIERS :  1536 Locally Selective Combination (LSCP)
+\end{lstlisting}
+
+Vemos que en general, todos los algoritmos nos han proporcionado los mismos resultados, los contornos, outliers e inliers son muy parecidos.
 
 \chapter*{Planteamiento de futuro}
 \addcontentsline{toc}{chapter}{Planteamiento de futuro}  
 
-
+En los modelos que creamos anteriormente, usamos todo el conjunto de datos para entrenar nuestros algoritmos. En la práctica, no tenemos acceso a la información en el futuro (al menos no con la tecnología actual). Si tuvieramos más tiempo podríamos intentar realizar aprendizaje supervisado, aunque el problema de esto seria que tendríamos que etiquetar a mano cuales son las anomalías y ya clasificar con una clase outlier y otra de datos normales. El principal problema del área de conocimiento elegido es como hemos comentado en algún momento en el guión, y es que son procesos estocásticos, tenemos la variable del tiempo, si contamos los días como si no fuera importante estamos perdiendo un factor. También habría que tener más conocimiento sobre el área de estudio para definir bien que buscamos como outlier. En un par de busquedas por internet vemos que una buena solución que aplica la gente y especialistas del gremio es soluciones deep learning time-series data. \cite{stock-market-anomalies}. Algorithmic trading ha revolucionado el mercado de valores y la industria que lo rodea. Más del 70\% de todas las operaciones que se realizan en los EE. UU están hechas por bots \cite{nn}. Atrás quedaron los días de la bolsa de valores abarrotada con gente vestida agitando hojas de papel gritando en los teléfonos.
+Este tema me hace pensar en cómo podría desarrollar mi propio algoritmo para negociar acciones, o al menos tratar de predecirlas con precisión. Si pudiera dedicarle más tiempo al problema me gustaría estudiar deep learning para este tipo de problemas. Las finanzas son problemas no lineales y, a veces, los datos de precios de las acciones pueden incluso parecer completamente aleatorios. Los métodos tradicionales de time series como los modelos ARIMA, SARIMA y GARCH son efectivos solo cuando la serie es estacionaria, que es una suposición restrictiva que requiere que la serie sea preprocesada tomando retornos logarítmicos (u otras transformaciones). Sin embargo, el problema principal surge al implementar estos modelos en un sistema de comercio en vivo, ya que no hay garantía de estacionariedad a medida que se agregan nuevos datos.
+Eluso de redes neuronales (modelos secuenciales como LSTM, GRU, etc.), que no requieren ninguna estacionariedad para su uso parece la solución más adecuada. Además, las redes neuronales por naturaleza son efectivas para encontrar las relaciones entre los datos y usarlas para predecir (o clasificar) nuevos datos. Machine learning y deep learning han encontrado su lugar en las instituciones financieras por su poder para predecir datos de series de tiempo con altos grados de precisión y la investigación aún continúa para mejorar los modelos. Y aunque informes recientes sugieren que la inteligencia artificial "descifrará el código" de los mercados financieros mediante el uso de big data y aprendizaje automático \cite{crack} no creo que haya un código que descifrar. Lo que sí existe es la búsqueda constante de una “ventaja” sistemática en la que una máquina reconozca cuándo y cuánto riesgo tomar. Lo cuál me hace pensar que ahora mismo no hay un "método" para prevenir la "anomalía", ya que si lo hubiera, se habría visto venir el acontecimiento comentado en el guión, pero al contrario esto ha pillado a todo wallstreet por sorpresa. Finalmente, de nuevo decir que si disponiera de más tiempo para dedicarle a este proyecto, me gustaría ver técnicas aplicadas de deep leraning a time series en problemas de este estilo y estudiar más a fondo porque no se puede predecir el valor de una acción.
 %% bibliography
 \medskip
 
