@@ -85,8 +85,7 @@ Al principio para orientar esta práctica alternativa a un tema específico, las
 \addcontentsline{toc}{section}{Planteamiento del problema}  
 
 
-
-Un resumen rápido de esta situación es que un grupo de inversores decidió apostar fijo por la caída de las acciones de GameStop sin arriesgarse, pues esta tienda llevaba perdiendo en bolsa desde bastante tiempo principalmente por el auge de las ventas digitales frente al formato físico. De esta forma, acordaron vender sus acciones a un precio fijo dentro de un periodo de tiempo determinado dando por sentado que las acciones de la tienda seguirían cayendo y deseando así que las acciones cayeran para obtener beneficio.
+Un resumen rápido de esta situación \cite{pictoline} es que un grupo de inversores decidió apostar fijo por la caída de las acciones de GameStop sin arriesgarse, pues esta tienda llevaba perdiendo en bolsa desde bastante tiempo principalmente por el auge de las ventas digitales frente al formato físico. De esta forma, acordaron vender sus acciones a un precio fijo dentro de un periodo de tiempo determinado dando por sentado que las acciones de la tienda seguirían cayendo y deseando así que las acciones cayeran para obtener beneficio.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{../code/figures/gamestop-stocks}
@@ -119,41 +118,114 @@ En el comercio como en la vida, a menudo es extremadamente valioso determinar si
 \chapter*{Descripción de los algoritmos}
 \addcontentsline{toc}{chapter}{Descripción de los algoritmos}  
 
-Vamos a utilizar y comparar algoritmos de las bibliotecas PyOD \cite{pyod} y Scikit-Learn Outlier Detection \cite{sklearn}, primero, vamos a comentar algunos de ellos. El módulo Python Outlier Detection (PyOD) facilita el modelado de detección de anomalías. Recopila una amplia gama de técnicas que van desde el aprendizaje supervisado hasta las técnicas de aprendizaje no supervisado. No es necesario probar todas las técnicas para encontrar anomalías. Dependiendo de los datos, algunas técnicas funcionan mejor que otras.
+Vamos a utilizar y comparar algoritmos de las bibliotecas PyOD \cite{pyod} y Scikit-Learn Outlier Detection \cite{sklearn}, primero, vamos a comentar algunos de ellos. El módulo Python Outlier Detection (PyOD) facilita el modelado de detección de anomalías. Recopila una amplia gama de técnicas que van desde el aprendizaje supervisado hasta las técnicas de aprendizaje no supervisado. No es necesario probar todas las técnicas para encontrar anomalías. Dependiendo de los datos, algunas técnicas funcionan mejor que otras. Típicamente el problema de detección de anomalías es un problema no supervisado, esto quiere decir que nuestros algoritmos no tienen etiquetas para entrenar. No obstante tenemos aproximaciones de algoritmos supervisados para este tipo de problemas, aunque debido al conjunto de datos que hemos elegido donde tenemos un problema de aprendizaje no supervisado (cluster) donde intentaremos aprender el patrón de lo datos pero no mediante conjuntos de entrenaimiento sino por esta demasiado lejos de un grupo, directamente sobre el conjunto aplicamos las ténicas, luego es un problema no supervisado donde nos centraremos principalmente en algoritmos no supervisados de las librerias comentadas anterioremente. 
 
-\section*{Isolation Forest}
-\addcontentsline{toc}{section}{Isolation Forest}  
+Los algoritmos que probaremos algoritmos no supervisados han sido escogidos de la documentación de PyOD \cite{lista} y son los siguientes:
 
-Un Isolation Forest \textit{aísla} las observaciones seleccionando al azar una característica y luego
-seleccionar al azar un valor de división entre el máximo y mínimo valores mínimos de la
-característica seleccionada.
+\begin{enumerate}
+	\item \textbf{Linear Models for Outlier Detection}
+	\begin{enumerate}
+		\item \textbf{PCA}: Principal Component Analysis es una reducción de dimensionalidad lineal que utiliza la descomposición de valores singulares
+     de los datos para proyectarlo a un espacio dimensional inferior. Aunque tiene una gran cantidad de usos nosotros vamos a centrarnos en detección de anomalías.
 
-Dado que la partición recursiva puede ser representada por una estructura de árbol, el número de
-divisiones necesarias para aislar una muestra es equivalente a la longitud del camino desde el
-nodo raíz hasta el último nodo.
-Esta longitud de la ruta, promediada sobre un bosque de árboles tan aleatorios, es una medida de
-la normalidad y nuestra función de decisión.
-La división aleatoria produce caminos notablemente más cortos para las anomalías.
+     En este procedimiento, la matriz de covarianza de los datos se puede descomponer en
+     vectores ortogonales, llamados autovectores, asociados con autovalores. los
+     vectores propios con valores propios altos capturan la mayor parte de la varianza en el
+     datos.
 
-Por lo tanto, cuando un bosque de árboles al azar produce colectivamente entre los nodos
-longitudes de camino más cortas para muestras particulares, es muy probable que sean anomalías.
+     Por lo tanto, un hiperplano de baja dimensión construido por k autovectores puede
+     capturar la mayor parte de la varianza en los datos. Sin embargo, los valores atípicos son diferentes
+     de puntos de datos normales, que es más obvio en el hiperplano
+     construido por los autovectores con pequeños autovalores.
 
-La idea de identificar una observación normal frente a una anormal puede observarse en un punto
-normal, requiere que se identifiquen más particiones que una anomalía.
-Al igual que con otros métodos de detección de anomalías, se requiere un punto anómalo para la
-toma de decisiones. En el caso del Isolation Forest, se define como:
-$$ s(x,n) = 2^{-\frac{E(h(x)}{c(n)}}$$ 
-donde $h(x)$ es la longitud del camino de observación $x$, $c(n)$ es la longitud media del camino de búsqueda fallida en un Árbol de Búsqueda Binario y n es el número de nodos externos.
+     Por lo tanto, los valores anomalos buscados se pueden obtener como la suma de los valores proyectados
+     distancia de una muestra en todos los vectores propios y la puntuación será la suma de la distancia euclidiana ponderada entre cada muestra y la
+     hiperplano construido por los autovectores seleccionados.
+		\item \textbf{Minimum Covariance Determinant (MCD)} (use the mahalanobis distances as the outlier scores). Es un estimador robusto de covarianza.
 
-A cada observación se le da una puntuación de la anomalía y se puede tomar la siguiente decisión en base a ella:
-\begin{itemize}
-	\item Una puntuación cercana a $1$ indica anomalías.
-	\item Una puntuación mucho menor que $0.5$ indica observaciones normales.
-	\item Si todas las puntuaciones se acercan a $0.5$, entonces la muestra completa no parece tener anomalías claramente diferenciadas.
-\end{itemize}
+     Se aplicará el estimador de covarianza determinante de covarianza mínima
+     en datos distribuidos en gauss, pero aún podría ser relevante en datos
+     extraído de una distribución simétrica unimodal. No está destinado a ser utilizado
+     con datos multimodales (el algoritmo utilizado para ajustar un objeto MinCovDet es
+     probable que falle en tal caso).
+     Se deben considerar métodos de búsqueda de proyecciones para hacer frente a multimodales
+     conjuntos de datos.
+
+     Primero se ajusta un modelo determinante de covarianza mínima y luego calcule el
+     Distancia de Mahalanobis como el grado atípico de los datos
+		\item \textbf{One-Class Support Vector Machines (OCSVM)}. Ya hemos visto en clase este tipo de modelos, solo que en este caso se plantea otra funcionalidad. Detección de valores atípicos sin supervisión esstimando el soporte de una distribución de alta dimensión. La implementación se basa en libsvm de Sklearn aunque utilizaremos el algoritmo de PyOD.
+	\end{enumerate}
+	\item \textbf{Proximity-Based Outlier Detection Models}
+	\begin{enumerate}
+		\item \textbf{Local Outlier Factor (LOF)}
+		La puntuación de anomalía de cada muestra se denomina Factor de valor atípico local (LOF).
+     Mide la desviación local de densidad de una muestra dada con
+     respeto a sus vecinos, es local en el sentido de que la puntuación de anomalía depende de qué tan aislado esté el objeto
+     es con respecto al vecindario circundante.
+     Más precisamente, la localidad está dada por k vecinos más cercanos, cuya distancia
+     se utiliza para estimar la densidad local.
+     Comparando la densidad local de una muestra con las densidades locales de
+     sus vecinos, uno puede identificar muestras que tienen un sustancialmente menor
+     densidad que sus vecinos. Estos se consideran valores atípicos.
+		\item \textbf{Clustering-Based Local Outlier Factor (CBLOF)} 
+		CBLOF toma como entrada el conjunto de datos y el modelo de clúster que se
+     generado por un algoritmo de agrupamiento. Clasifica los grupos en pequeños
+     clústeres y clústeres grandes utilizando los parámetros alfa y beta.
+     Luego, la puntuación de anomalía se calcula en función del tamaño del clúster
+     punto al que pertenece, así como la distancia al cúmulo grande más cercano.
+
+     Utiliza la ponderación para el factor de valores atípicos en función de los tamaños de los grupos como
+     propuesto en la publicación original. Dado que esto puede llevar a
+     comportamiento (no se encuentran valores atípicos cercanos a grupos pequeños), está deshabilitado
+     Las puntuaciones de Outliers se calculan únicamente en función de su distancia a
+     el centro grande más cercano.
+
+     De forma predeterminada, kMeans se utiliza para el algoritmo de agrupación en clústeres en lugar de
+     Algoritmo Squeezer mencionado en el artículo original por múltiples razones.
+		\item \textbf{k Nearest Neighbors  (kNN)}  De nuevo, ya hemos visto este tipo de algoritmo en la asignatura, solo que en este caso se usa la distancia al kth vecino más cercano como puntuación de anomalía.
+		\item \textbf{Median kNN Outlier Detection}  Igual que antes solo que utilizando la median distance.
+		\item \textbf{Histogram-based Outlier Score (HBOS)} es un algoritmo es un eficiente sin supervisión. Asume la independencia de la función y calcula el grado de las anomalías mediante la construcción de histogramas.
+	\end{enumerate}
+	\item \textbf{Probabilistic Models for Outlier Detection}
+	\begin{enumerate}
+		\item \textbf{Angle-Based Outlier Detection (ABOD)} Considera la relación entre cada punto y su (s) vecino (s). No considera las relaciones entre estos vecinos. La varianza de sus puntuaciones de coseno ponderadas a todos los vecinos podría verse como la puntuación periférica. Funciona bien en multidimensional data.
+	\end{enumerate}
+	\item \textbf{Outlier Ensembles and Combination Frameworks}
+	\begin{enumerate}
+		\item \textbf{Isolation Forest} Utiliza la biblioteca scikit-learn internamente. En este método, la partición de datos se realiza mediante un conjunto de árboles. Isolation Forest proporciona una puntuación de anomalía al observar qué tan aislado está el punto en la estructura. Luego, la puntuación de anomalía se utiliza para identificar valores atípicos de observaciones normales
+Isolation Forest funciona bien en datos multidimensionales
+		\item \textbf{LSCP} LSCP es un conjunto de detección de valores atípicos paralelo no supervisado que selecciona
+    detectores competentes en la región local de una instancia de prueba. Esta
+    La implementación utiliza una estrategia de Promedio de Máximo \textit{(Average of Maximum)}. Primero, un heterogéneo
+    La lista de detectores base se ajusta a los datos de entrenamiento y luego genera un
+    la verdad pseudo-terrestre para cada instancia de tren es generada por
+    tomando la puntuación máxima de valores atípicos.
+
+    Para cada instancia de prueba:
+    	\begin{enumerate}
+       \item La región local se define como el conjunto de puntos de entrenamiento más cercanos en
+    subespacios de características muestreados aleatoriamente que ocurren con más frecuencia que
+    un umbral definido en múltiples iteraciones.
+
+    \item Usando la región local, se define una verdad de pseudo terreno local y la
+    La correlación de pearson se calcula entre el entrenamiento de cada detector base
+    puntajes atípicos y la verdad pseudo fundamental.
+
+\item Se construye un histograma a partir de las puntuaciones de correlación de Pearson; detectores en
+    los contenedores más grandes se seleccionan como detectores de base competentes para el
+    instancia de prueba.
+
+    \item Se toma la puntuación promedio de valores atípicos de los detectores competentes seleccionados
+    para ser la puntuación final.
+    	\end{enumerate}
+	\end{enumerate}
+\end{enumerate}
+
 
 \chapter*{Estudio experimental}
 \addcontentsline{toc}{chapter}{Estudio experimental}  
+
+
 
 \chapter*{Planteamiento de futuro}
 \addcontentsline{toc}{chapter}{Planteamiento de futuro}  
